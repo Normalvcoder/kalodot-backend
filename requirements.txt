@@ -2,4 +2,4 @@ Flask
 google-genai
 pillow
 python-dotenv
-gunicorngit add .
+gunicorn
