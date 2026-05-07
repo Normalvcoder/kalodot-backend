@@ -1,5 +1,6 @@
 from app import app
 
+
 @app.route('/')
 def home():
     return "Kalodot Backend is LIVE and Running!", 200

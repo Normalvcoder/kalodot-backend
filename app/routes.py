@@ -5,6 +5,7 @@ import time
 from flask import request, jsonify
 from PIL import Image
 from app import app, client
+from .auth import require_api_key
 
 @app.route('/analyze', methods=['POST'])
 def analyze_food():
