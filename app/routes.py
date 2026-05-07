@@ -18,14 +18,20 @@ def analyze_food():
         image = Image.open(io.BytesIO(image_bytes))
 
         prompt = """
-        Analyze the attached image of food. Identify the primary food items and estimate the total 
-        calories based on a standard, average portion size in grams (metric system). 
-        Return ONLY a valid JSON object with no markdown formatting or code blocks. 
-        The JSON must have exactly these three keys: 
-        'food_name' (string), 
-        'estimated_calories' (integer), 
-        'macro_breakdown' (string, e.g., 'Protein: 20g, Carbs: 30g, Fat: 10g').
-        """
+    You are an expert nutritionist AI analyzing a meal.
+    You must respond ONLY with a raw, valid JSON object. 
+    Do NOT include Markdown formatting like ```json or any conversational text.
+    
+    You must calculate the portion size in grams or milliliters.
+    
+    Your JSON must contain exactly these four keys:
+    1. "food_name": The name of the dish and portion size (e.g., "Grilled Salmon (approx. 200g)").
+    2. "estimated_calories": An integer representing total kcal.
+    3. "macro_breakdown": A string summarizing macros (e.g., "40g Protein | 0g Carbs | 15g Fat").
+    
+    EDGE CASE: If the image clearly does not contain food or drinks, you must return:
+    {"food_name": "Error: No food detected", "estimated_calories": 0, "macro_breakdown": "N/A"}
+    """
 
         print("Sending to AI for analysis...")
         start_time = time.time()
