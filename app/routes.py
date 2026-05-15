@@ -17,6 +17,8 @@ def analyze_food():
         base64_string = data['image_data']
         image_bytes = base64.b64decode(base64_string)
         image = Image.open(io.BytesIO(image_bytes))
+        
+        user_language = request_data.get("language", "en")
 
         prompt = """
     You are an expert nutritionist AI analyzing a meal.
@@ -29,7 +31,7 @@ def analyze_food():
     1. "food_name": The name of the dish and portion size (e.g., "Grilled Salmon (approx. 200g)").
     2. "estimated_calories": An integer representing total kcal.
     3. "macro_breakdown": A string summarizing macros (e.g., "40g Protein | 0g Carbs | 15g Fat").
-    
+    CRITICAL: You must write your entire response in the '{user_language}' language code.
     EDGE CASE: If the image clearly does not contain food or drinks, you must return:
     {"food_name": "Error: No food detected", "estimated_calories": 0, "macro_breakdown": "N/A"}
     """
