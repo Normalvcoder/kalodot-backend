@@ -18,7 +18,7 @@ def analyze_food():
         image_bytes = base64.b64decode(base64_string)
         image = Image.open(io.BytesIO(image_bytes))
         
-        user_language = request_data.get("language", "en")
+        user_language = data.get("language", "en")
 
         prompt = """
     You are an expert nutritionist AI analyzing a meal.
