@@ -1,0 +1,48 @@
+## Proje Raporu: Kalodot Uygulaması
+
+**Kalodot**, standart diyet uygulamalarının sıkıcı ve tekdüze yapısını kırarak, yapay zeka destekli görüntü işleme ve oyunlaştırma (gamification) dinamiklerini bir araya getiren yenilikçi bir mobil beslenme ve kalori takip uygulamasıdır.
+
+Uygulamanın alışılagelmişin dışındaki en büyük özelliği, bir uygulama geliştirme çatısı yerine esnek ve yüksek performanslı **Godot Oyun Motoru** ile geliştirilmiş olmasıdır. Bu sayede uygulama içi etkileşimler, animasyonlar ve seviye sistemleri (XP) entegre bir oyun deneyimi sunar.
+
+---
+
+### 1. Uygulama Nasıl Çalışır?
+
+Kullanıcı perspektifinden Kalodot'un çalışma akışı üç temel aşamadan oluşur:
+
+1. **Kişiselleştirme ve Hedef Belirleme:**
+Kullanıcı uygulamayı ilk açtığında fiziksel ölçümlerini (yaş, boy, kilo) ve günlük aktivite seviyesini girer. Uygulama arka planda Harris-Benedict veya benzeri bir algoritma çalıştırarak kullanıcının **TDEE** (Günlük Toplam Enerji Harcaması) değerini hesaplar ve günlük kalori hedefini belirler.
+2. **Yapay Zeka Destekli Öğün Yükleme:**
+Kullanıcı, yediği yemeğin fotoğrafını çeker veya galeriden seçer. Manuel olarak kalori girmek yerine, fotoğraf bulut tabanlı bir yapay zekaya gönderilir. Saniyeler içinde yemeğin adı, porsiyon tahmini, kalorisi ve makro değerleri (Protein, Karbonhidrat, Yağ) otomatik olarak ekrana yansır.
+3. **Oyunlaştırma ile Ödüllendirme (XP Sistemi):**
+Sisteme kaydedilen her öğün, kullanıcıya belirli bir miktar XP (deneyim puanı) kazandırır. Günlük kalori hedeflerine uyulması ve düzenli kullanım ile ekranın üst kısmındaki animasyonlu seviye çubuğu dolar ve kullanıcı "Level Up" (Seviye Atlama) yaşar.
+
+---
+
+### 2. Mimari ve Kod Altyapısı
+
+Proje mimarisi **İstemci (Godot)** ve **Sunucu (Python/Flask)** olmak üzere iki ana bileşene ayrılmıştır.
+
+#### Ön Uç (İstemci - Godot & GDScript)
+
+* **Görüntü İşleme ve Optimizasyon:** Kullanıcının seçtiği yüksek çözünürlüklü fotoğraflar, mobil veri tasarrufu sağlamak ve sunucuya hızlı yüklenmek amacıyla Godot içerisinde küçültülür (maksimum 800 piksel) ve JPG formatında sıkıştırılarak `Base64` dizisine çevrilir.
+* **REST API İletişimi:** Hazırlanan bu Base64 verisi, `HTTPRequest` düğümü kullanılarak JSON formatında POST isteği olarak Render.com'da barındırılan sunucuya iletilir. Bu isteğe güvenlik için özel bir `X-Kalodot-Key` başlığı ve uygulamanın o anki arayüz dili de (örn: `"tr"`) eklenir.
+* **Yerel Veri Yönetimi (Local Storage):** Sunucudan dönen yapay zeka analizleri ve indirilen görseller, cihazın `user://kalodot_history.json` dosyasına işlenir. Geçmiş öğünler, XP değerleri ve TDEE hedefleri cihazda tutulur, böylece internet bağlantısı kopsa dahi kullanıcı eski verilerini görebilir.
+* **Yerelleştirme (Godot TranslationServer):** Arayüz tamamen dinamiktir. CSV tabanlı bir çeviri sözlüğü sayesinde (Türkçe ve İngilizce), menü kodları `TranslationServer.set_locale()` fonksiyonu ile anında çevrilir. Modlanabilir yapısı sayesinde, harici bir CSV dosyası ile uygulamaya yeni diller eklenebilir.
+
+#### Arka Uç (Sunucu - Python & Gemini AI)
+
+* **Flask API:** Sunucu, istemciden gelen istekleri `/analyze` uç noktasında (endpoint) karşılar. Gelen Base64 verisi tekrar bir görsel nesnesine dönüştürülür.
+* **Google Gemini 2.5 Flash Entegrasyonu:** İşlenen görsel, son derece hızlı ve maliyet odaklı bir model olan Gemini 2.5 Flash'a iletilir.
+* **Dinamik Prompt Mühendisliği:** Sistemin en kritik kod parçası burasıdır. Sunucu, Godot'tan gelen dil kodunu (örneğin `"tr"`) algılar ve yapay zekaya şu kesin talimatı verir: *"Sen bir beslenme uzmanısın. Gönderilen görseli analiz et ve bana SADECE '{user_language}' dilinde, Markdown içermeyen, geçerli bir JSON objesi döndür."*
+* **Hata Yönetimi (Retry Mechanism):** AI API'sinde yaşanabilecek anlık yoğunluklarda (HTTP 503 veya 429 hataları), sunucu çökmez. Kendini 5 saniye beklemeye alır ve isteği otomatik olarak tekrarlar. Sonuçları ayrıştırarak Godot'a geri postalar.
+
+---
+
+### 3. Kodun Öne Çıkan Özellikleri
+
+1. **Dinamik Dil Aktarımı:** İstemci ve sunucu arasındaki senkronizasyon sayesinde uygulamanın arayüzü hangi dildeyse, yapay zekanın döndürdüğü besin isimleri ve makro analizleri de saniyesinde o dile adapte olur.
+2. **Tween Animasyonları:** Godot'nun `create_tween()` yapısı sayesinde, kullanıcı XP kazandığında ilerleme çubuğu mekanik bir şekilde değişmez; fizik kurallarına uygun, yumuşak ve esnek (bounce) animasyonlarla görsel bir geri bildirim sağlar.
+3. **Güvenlik:** API, herkese açık bir şekilde internette bulunmasına rağmen, kod içerisindeki `X-Kalodot-Key` doğrulaması olmadan gelen hiçbir isteği (örneğin postman veya tarayıcı üzerinden yapılan saldırıları) işleme almaz, maliyet ve veri güvenliği sağlar.
+
+Kalodot, modern yapay zeka API'lerinin oyun motoru arayüzleriyle birleştiğinde ne kadar güçlü ve sürükleyici araçlar yaratılabileceğinin mükemmel bir örneğidir.
